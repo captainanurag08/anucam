@@ -1,0 +1,57 @@
+/*
+ * controls.css — the "More" bottom sheet (spec sections 4, 7-9, 30).
+ * Zoom/flash/focus/exposure/mode-bar chrome lives directly over the
+ * viewfinder and is styled in camera.css; this file covers the sheet of
+ * secondary controls it opens into.
+ */
+
+#more-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+#more-sheet-header h2 { font-size: 16px; margin: 0; }
+#more-sheet-close {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex; align-items: center; justify-content: center;
+}
+
+.more-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.more-row:last-of-type { border-bottom: none; }
+.more-row-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+.more-row-label svg { color: var(--text-secondary); width: 18px; height: 18px; }
+
+#document-mode-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  font-size: 14px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--hairline);
+  text-align: left;
+}
+#document-mode-btn svg { color: var(--accent); width: 20px; height: 20px; flex-shrink: 0; }
+#document-mode-btn .more-row-sub { color: var(--text-muted); font-size: 12px; display: block; margin-top: 2px; }
+
+.quality-option { min-width: 68px; text-align: center; }
+
+@media (min-width: 700px) {
+  .sheet { max-width: 520px; left: 50%; transform: translateX(-50%) translateY(100%); }
+  .sheet-open { transform: translateX(-50%) translateY(0); }
+}

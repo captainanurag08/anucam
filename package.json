@@ -1,0 +1,10 @@
+{
+  "name": "anurag-camera",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Anurag Camera - a computational-photography PWA. Static site, zero runtime dependencies. This file exists only so `node tests/*.js` can run locally; it is not required to deploy or serve the app.",
+  "scripts": {
+    "test": "node tests/processing-tests.js && node tests/capability-tests.js"
+  }
+}

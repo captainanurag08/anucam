@@ -1,0 +1,282 @@
+/*
+ * main.css — design tokens and shared primitives.
+ *
+ * Design direction: a dark, precision-instrument camera HUD rather than a
+ * generic "dark mode app". Base is a near-black ink tone (not pure #000,
+ * so OLED blacks don't crush completely and dark-on-dark text stays
+ * legible), with a single warm amber accent for anything the camera is
+ * actively doing (focus lock, active mode, active control) — amber/gold
+ * is a deliberate nod to real camera AE/AF indicators rather than a
+ * generic brand-blue or neon-green "dark mode" accent. Recording state
+ * uses conventional red, since that convention carries real information
+ * and departing from it would only confuse.
+ *
+ * Type: a system-font stack rather than a webfont. This is a deliberate
+ * trade-off, not an oversight — a linked Google Fonts stylesheet would be
+ * a third-party network request the spec explicitly avoids (section 41)
+ * and would silently fail once the PWA is offline (section 37). HUD
+ * numerals (zoom, timer, exposure, debug readouts) use tabular-nums so
+ * they don't jitter as digits change, which is a functional choice for
+ * a live readout, not a decorative one.
+ */
+
+:root {
+  --ink: #121214;
+  --ink-elevated: #1c1c1f;
+  --ink-overlay: rgba(18, 18, 20, 0.72);
+  --hairline: rgba(255, 255, 255, 0.1);
+  --text-primary: #ededef;
+  --text-secondary: #a3a3a8;
+  --text-muted: #6b6b70;
+  --accent: #ffb238;
+  --accent-ink: #2a1c00;
+  --record: #ff3b30;
+  --success: #34c759;
+  --danger: #ff453a;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-shutter: 50%;
+  --control-size: 48px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-hud: ui-monospace, "SF Mono", "Roboto Mono", "Courier New", monospace;
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overscroll-behavior: none;
+  background: var(--ink);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  user-select: none;
+}
+
+#app { height: 100%; width: 100%; position: relative; }
+
+button {
+  font-family: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+button:disabled { opacity: 0.35; pointer-events: none; }
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.hud-num {
+  font-family: var(--font-hud);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  background: var(--ink);
+}
+.screen-active { display: flex; flex-direction: column; }
+
+.icon-btn {
+  width: var(--control-size);
+  height: var(--control-size);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(28, 28, 31, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.icon-btn svg { width: 22px; height: 22px; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Toasts */
+#toast-container {
+  position: fixed;
+  left: 50%;
+  bottom: calc(120px + var(--safe-bottom));
+  transform: translateX(-50%);
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  background: var(--ink-overlay);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: var(--text-primary);
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  border: 1px solid var(--hairline);
+}
+.toast-visible { opacity: 1; transform: translateY(0); }
+
+.reduced-motion * {
+  animation-duration: 0.001ms !important;
+  transition-duration: 0.001ms !important;
+}
+
+/* Bottom sheet (used by "More" and elsewhere) */
+.sheet-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 500;
+}
+.sheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  background: var(--ink-elevated);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border-top: 1px solid var(--hairline);
+  transform: translateY(100%);
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 501;
+  padding: 8px 20px calc(20px + var(--safe-bottom));
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.sheet-open { transform: translateY(0); }
+.sheet-open + .sheet-backdrop,
+.sheet-open ~ .sheet-backdrop { opacity: 1; pointer-events: auto; }
+.sheet-handle {
+  width: 36px; height: 4px;
+  background: var(--text-muted);
+  border-radius: 2px;
+  margin: 10px auto 16px;
+}
+.sheet-section-title {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: none;
+  margin: 18px 0 8px;
+  font-weight: 600;
+}
+.sheet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.sheet-row:last-child { border-bottom: none; }
+
+.option-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.option-chip {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  font-size: 13px;
+  border: 1px solid transparent;
+}
+.option-chip.option-active {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.primary-btn {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+  padding: 13px 20px;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  text-align: center;
+}
+.secondary-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  padding: 13px 20px;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  text-align: center;
+}
+
+/* Permission screen */
+#screen-permission { align-items: center; justify-content: center; text-align: center; padding: 32px; gap: 16px; }
+#screen-permission .permission-icon { color: var(--accent); margin-bottom: 8px; }
+#screen-permission h1 { font-size: 20px; margin: 0; }
+#screen-permission p { color: var(--text-secondary); font-size: 15px; line-height: 1.5; max-width: 340px; margin: 0; }
+
+/* Toggle switch */
+.toggle {
+  position: relative;
+  width: 46px; height: 28px;
+  -webkit-appearance: none; appearance: none;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.toggle::before {
+  content: "";
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s ease;
+}
+.toggle:checked { background: var(--accent); }
+.toggle:checked::before { transform: translateX(18px); }
+
+select.select-input {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 8px 30px 8px 12px;
+  font-size: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23a3a3a8'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}

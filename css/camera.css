@@ -1,0 +1,359 @@
+/*
+ * camera.css — the viewfinder screen (spec sections 4, 42, 64).
+ * Preview dominates; chrome is translucent and recedes when idle.
+ */
+
+#screen-camera { background: #000; }
+
+#viewfinder-stage {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#viewfinder {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.15s ease;
+  transform-origin: center center;
+}
+#viewfinder.mirrored { transform: scaleX(-1); }
+
+/* Aspect ratio letterboxing: overlay dark bars rather than constraining the
+   actual camera stream, which the hardware controls (spec section 9). */
+#viewfinder-stage[data-aspect="1:1"] #aspect-mask,
+#viewfinder-stage[data-aspect="4:3"] #aspect-mask {
+  display: block;
+}
+#aspect-mask {
+  display: none;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--ink) 0 0) top / 100% var(--mask-v, 0) no-repeat,
+    linear-gradient(var(--ink) 0 0) bottom / 100% var(--mask-v, 0) no-repeat;
+  opacity: 0.94;
+}
+#viewfinder-stage[data-aspect="4:3"] #aspect-mask { --mask-v: 12%; }
+#viewfinder-stage[data-aspect="1:1"] #aspect-mask { --mask-v: 18%; }
+
+#grid-overlay, #viewfinder-tap-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+#grid-overlay { pointer-events: none; }
+#viewfinder-tap-layer { background: transparent; }
+
+#focus-ring {
+  position: absolute;
+  width: 76px; height: 76px;
+  margin-left: -38px; margin-top: -38px;
+  border: 1.5px solid var(--text-primary);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+#focus-ring.focus-ring-active {
+  opacity: 1;
+  animation: focus-pulse 0.6s ease-out;
+}
+#focus-ring.focus-ring-supported { border-color: var(--accent); }
+@keyframes focus-pulse {
+  0% { transform: scale(1.3); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+#exposure-wrap {
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 180px;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+#exposure-wrap.exposure-wrap-visible { opacity: 1; pointer-events: auto; }
+#exposure-slider {
+  -webkit-appearance: slider-vertical;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 32px;
+  height: 160px;
+  accent-color: var(--accent);
+}
+
+/* Top bar */
+#top-bar {
+  position: absolute;
+  top: calc(12px + var(--safe-top));
+  left: 0; right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 20;
+}
+#top-bar-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+#hdr-indicator {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 178, 56, 0.15);
+  color: var(--accent);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+#hdr-indicator.indicator-visible { display: flex; }
+
+#flash-btn[data-flash="auto"] .flash-icon-auto { display: block; }
+#flash-btn[data-flash="auto"] .flash-icon-off,
+#flash-btn[data-flash="auto"] .flash-icon-on { display: none; }
+#flash-btn[data-flash="on"] { color: var(--accent); }
+#flash-btn[data-flash="on"] .flash-icon-on { display: block; }
+#flash-btn[data-flash="on"] .flash-icon-off,
+#flash-btn[data-flash="on"] .flash-icon-auto { display: none; }
+#flash-btn[data-flash="off"] .flash-icon-off { display: block; }
+#flash-btn[data-flash="off"] .flash-icon-on,
+#flash-btn[data-flash="off"] .flash-icon-auto { display: none; }
+
+#video-record-indicator {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 5px 12px 5px 8px;
+  border-radius: 999px;
+}
+#video-record-indicator.recording-active { display: flex; }
+#video-record-indicator .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--record);
+  animation: record-blink 1s ease-in-out infinite;
+}
+#video-timer { font-size: 13px; }
+@keyframes record-blink { 50% { opacity: 0.25; } }
+
+/* Zoom controls */
+#zoom-controls {
+  position: absolute;
+  bottom: 138px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  background: rgba(18, 18, 20, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 999px;
+  padding: 4px;
+  z-index: 20;
+}
+.zoom-btn {
+  min-width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 0 6px;
+}
+.zoom-btn.zoom-btn-active {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+.zoom-optical-only .zoom-btn { font-style: normal; }
+
+/* Bottom control cluster */
+#bottom-bar {
+  position: absolute;
+  bottom: calc(28px + var(--safe-bottom));
+  left: 0; right: 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0 28px;
+  z-index: 20;
+}
+
+#gallery-thumb {
+  width: 46px; height: 46px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  background-size: cover;
+  background-position: center;
+  background-color: rgba(255, 255, 255, 0.08);
+  justify-self: start;
+}
+
+#switch-camera-btn { justify-self: end; }
+.switch-camera-spinning svg { animation: spin-once 0.4s ease; }
+@keyframes spin-once { to { transform: rotate(180deg); } }
+
+#shutter-btn {
+  justify-self: center;
+  width: 74px; height: 74px;
+  border-radius: 50%;
+  border: 4px solid var(--text-primary);
+  background: transparent;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#shutter-btn::before {
+  content: "";
+  width: 58px; height: 58px;
+  border-radius: 50%;
+  background: var(--text-primary);
+  transition: all 0.15s ease;
+}
+#shutter-btn:active::before { width: 48px; height: 48px; }
+#shutter-btn.shutter-busy { opacity: 0.6; pointer-events: none; }
+#shutter-btn.shutter-busy::before { animation: shutter-pulse 0.9s ease-in-out infinite; }
+@keyframes shutter-pulse { 50% { opacity: 0.4; } }
+
+#shutter-btn.shutter-btn-video::before {
+  background: var(--record);
+  border-radius: 10px;
+  width: 30px; height: 30px;
+}
+#shutter-btn.shutter-btn-video.shutter-recording::before {
+  border-radius: 8px;
+  width: 26px; height: 26px;
+}
+#shutter-btn.shutter-btn-video { border-color: var(--record); }
+
+#shutter-flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 30;
+}
+#shutter-flash.flash-active { animation: shutter-flash 0.35s ease-out; }
+@keyframes shutter-flash { 0% { opacity: 0.85; } 100% { opacity: 0; } }
+
+#timer-countdown {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 88px;
+  font-weight: 200;
+  color: #fff;
+  z-index: 25;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.6);
+}
+#timer-countdown.countdown-active { display: flex; }
+
+#processing-indicator {
+  position: absolute;
+  top: calc(60px + var(--safe-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  align-items: center;
+  gap: 8px;
+  background: var(--ink-overlay);
+  backdrop-filter: blur(12px);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  z-index: 20;
+}
+#processing-indicator.processing-active { display: flex; }
+#processing-indicator .spinner {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 178, 56, 0.3);
+  border-top-color: var(--accent);
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Mode bar */
+#mode-bar {
+  position: absolute;
+  bottom: calc(112px + var(--safe-bottom));
+  left: 0; right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 22px;
+  overflow-x: auto;
+  padding: 0 20px;
+  z-index: 20;
+  scrollbar-width: none;
+}
+#mode-bar::-webkit-scrollbar { display: none; }
+
+.mode-btn {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  padding: 6px 2px;
+  position: relative;
+  flex-shrink: 0;
+}
+.mode-btn.mode-btn-active { color: #fff; font-weight: 600; }
+.mode-btn.mode-btn-active::after {
+  content: "";
+  position: absolute;
+  bottom: -2px; left: 50%;
+  transform: translateX(-50%);
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* Debug panel */
+#debug-panel {
+  position: absolute;
+  top: calc(52px + var(--safe-top));
+  left: 12px;
+  right: 12px;
+  max-height: 46vh;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  font-family: var(--font-hud);
+  font-size: 11px;
+  color: #b8ffb0;
+  z-index: 50;
+  line-height: 1.6;
+}
+#debug-panel h3 { margin: 8px 0 4px; color: #fff; font-size: 11px; font-family: var(--font-ui); }
+#debug-panel .debug-row { display: flex; justify-content: space-between; gap: 10px; }
+#debug-panel .debug-row span:first-child { color: #7a9a76; }
+
+@media (min-width: 700px) {
+  #viewfinder-stage { max-width: 520px; margin: 0 auto; }
+  #top-bar, #bottom-bar, #mode-bar, #zoom-controls, #debug-panel { max-width: 520px; left: 50%; right: auto; transform: translateX(-50%); }
+  #zoom-controls { transform: translateX(-50%); }
+}

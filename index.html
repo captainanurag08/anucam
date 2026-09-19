@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Anurag Camera</title>
+<meta name="description" content="A privacy-first computational photography camera, built as an installable web app. All processing happens on your device.">
+<meta name="theme-color" content="#121214">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Anurag Camera">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="assets/icons/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/camera.css">
+<link rel="stylesheet" href="css/controls.css">
+<link rel="stylesheet" href="css/gallery.css">
+<link rel="stylesheet" href="css/editor.css">
+<link rel="stylesheet" href="css/settings.css">
+</head>
+<body>
+<noscript>Anurag Camera needs JavaScript enabled to run.</noscript>
+<div id="app">
+
+  <!-- ============ PERMISSION SCREEN ============ -->
+  <section id="screen-permission" class="screen screen-active" data-screen="permission">
+    <div class="permission-icon">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/>
+        <circle cx="12" cy="13.5" r="3.8"/>
+      </svg>
+    </div>
+    <h1>Anurag Camera</h1>
+    <p id="permission-message">This app needs camera access to show a live preview and capture photos. Nothing is ever uploaded — every photo stays on this device.</p>
+    <button id="permission-request-btn" class="primary-btn">Allow camera access</button>
+  </section>
+
+  <!-- ============ CAMERA SCREEN ============ -->
+  <section id="screen-camera" class="screen" data-screen="camera" data-mode="photo">
+
+    <div id="top-bar">
+      <button id="flash-btn" class="icon-btn" data-flash="off" aria-label="Flash mode" hidden>
+        <svg class="flash-icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="20" height="20"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/><line x1="3" y1="21" x2="21" y2="3"/></svg>
+        <svg class="flash-icon-on" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>
+        <svg class="flash-icon-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="20" height="20"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/><text x="15" y="8" font-size="7" fill="currentColor" stroke="none">A</text></svg>
+      </button>
+
+      <div id="top-bar-center">
+        <div id="hdr-indicator">HDR</div>
+        <div id="video-record-indicator"><span class="dot"></span><span id="video-timer" class="hud-num">00:00</span></div>
+      </div>
+
+      <button id="settings-btn" class="icon-btn" aria-label="Open settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 13a7.9 7.9 0 0 0 0-2l2-1.5-2-3.4-2.4 1a8 8 0 0 0-1.7-1L15 3h-4l-.3 2.6a8 8 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.9 7.9 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a8 8 0 0 0 1.7 1L11 21h4l.3-2.6a8 8 0 0 0 1.7-1l2.4 1 2-3.4z"/>
+        </svg>
+      </button>
+    </div>
+
+    <div id="viewfinder-stage" data-aspect="4:3">
+      <video id="viewfinder" autoplay playsinline webkit-playsinline muted></video>
+      <div id="aspect-mask" aria-hidden="true"></div>
+      <canvas id="grid-overlay" aria-hidden="true"></canvas>
+      <div id="viewfinder-tap-layer" role="button" aria-label="Tap to focus"></div>
+      <div id="focus-ring" aria-hidden="true"></div>
+
+      <div id="exposure-wrap">
+        <input type="range" id="exposure-slider" min="-1" max="1" step="0.05" value="0" orient="vertical" aria-label="Exposure compensation">
+      </div>
+
+      <div id="timer-countdown" class="hud-num" aria-live="polite"></div>
+      <div id="processing-indicator" role="status"><span class="spinner"></span><span>Enhancing…</span></div>
+      <div id="shutter-flash" aria-hidden="true"></div>
+    </div>
+
+    <div id="zoom-controls" role="group" aria-label="Zoom level">
+      <button class="zoom-btn" data-zoom="0.5">.5x</button>
+      <button class="zoom-btn zoom-btn-active" data-zoom="1">1x</button>
+      <button class="zoom-btn" data-zoom="2">2x</button>
+      <button class="zoom-btn" data-zoom="3">3x</button>
+    </div>
+
+    <nav id="mode-bar" aria-label="Capture mode">
+      <button class="mode-btn mode-btn-active" data-mode="photo">Photo</button>
+      <button class="mode-btn" data-mode="portrait">Portrait</button>
+      <button class="mode-btn" data-mode="night">Night</button>
+      <button class="mode-btn" data-mode="video">Video</button>
+      <button class="mode-btn" data-mode="more">More</button>
+    </nav>
+
+    <div id="bottom-bar">
+      <button id="gallery-thumb" aria-label="Open gallery"></button>
+      <button id="shutter-btn" aria-label="Capture photo"></button>
+      <button id="switch-camera-btn" class="icon-btn" aria-label="Switch camera">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="22" height="22">
+          <path d="M17 2 21 6 17 10"/><path d="M3 12v-1a5 5 0 0 1 5-5h13"/>
+          <path d="M7 22 3 18 7 14"/><path d="M21 12v1a5 5 0 0 1-5 5H3"/>
+        </svg>
+      </button>
+    </div>
+
+    <div id="debug-panel" hidden>
+      <h3>Camera</h3>
+      <div class="debug-row"><span>Resolution</span><span id="debug-resolution" class="hud-num">-</span></div>
+      <div class="debug-row"><span>Device tier</span><span id="debug-tier" class="hud-num">-</span></div>
+      <div class="debug-row"><span>Browser</span><span id="debug-browser" class="hud-num">-</span></div>
+      <div class="debug-row"><span>WebGL</span><span id="debug-webgl" class="hud-num">-</span></div>
+      <div class="debug-row"><span>WebAssembly</span><span id="debug-wasm" class="hud-num">-</span></div>
+      <div class="debug-row"><span>Worker</span><span id="debug-worker" class="hud-num">-</span></div>
+      <div class="debug-row"><span>ImageCapture</span><span id="debug-imagecapture" class="hud-num">-</span></div>
+      <div class="debug-row"><span>Torch</span><span id="debug-torch" class="hud-num">-</span></div>
+      <div class="debug-row"><span>Zoom</span><span id="debug-zoom" class="hud-num">-</span></div>
+      <div class="debug-row"><span>Focus point</span><span id="debug-focus" class="hud-num">-</span></div>
+      <div class="debug-row"><span>Exposure comp.</span><span id="debug-exposure" class="hud-num">-</span></div>
+      <h3>Last capture</h3>
+      <div class="debug-row"><span>Capture</span><span id="debug-t-capture" class="hud-num">-</span></div>
+      <div class="debug-row"><span>Analysis</span><span id="debug-t-analysis" class="hud-num">-</span></div>
+      <div class="debug-row"><span>Fusion (HDR/Night)</span><span id="debug-t-fusion" class="hud-num">-</span></div>
+      <div class="debug-row"><span>Denoise</span><span id="debug-t-denoise" class="hud-num">-</span></div>
+      <div class="debug-row"><span>Tone map</span><span id="debug-t-tonemap" class="hud-num">-</span></div>
+      <div class="debug-row"><span>Sharpen</span><span id="debug-t-sharpen" class="hud-num">-</span></div>
+      <div class="debug-row"><span>Export</span><span id="debug-t-export" class="hud-num">-</span></div>
+      <div class="debug-row"><span>Total</span><span id="debug-t-total" class="hud-num">-</span></div>
+      <div class="debug-row"><span>Stages</span><span id="debug-stages" class="hud-num">-</span></div>
+    </div>
+  </section>
+
+  <!-- ============ MORE SHEET ============ -->
+  <div id="more-sheet" class="sheet">
+    <div class="sheet-handle"></div>
+    <div id="more-sheet-header">
+      <h2>More</h2>
+      <button id="more-sheet-close" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="4" x2="16" y2="16"/><line x1="16" y1="4" x2="4" y2="16"/></svg>
+      </button>
+    </div>
+
+    <button id="document-mode-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/><path d="M9 13h6M9 17h6M9 9h2"/></svg>
+      <span>Document<span class="more-row-sub">Scan, straighten, and clean up a page</span></span>
+    </button>
+
+    <div class="sheet-section-title">Timer</div>
+    <div class="option-group" role="group" aria-label="Timer">
+      <button class="option-chip timer-option option-active" data-timer="off">Off</button>
+      <button class="option-chip timer-option" data-timer="3">3s</button>
+      <button class="option-chip timer-option" data-timer="5">5s</button>
+      <button class="option-chip timer-option" data-timer="10">10s</button>
+    </div>
+
+    <div class="sheet-section-title">Grid</div>
+    <div class="option-group" role="group" aria-label="Grid overlay">
+      <button class="option-chip grid-option option-active" data-grid="off">Off</button>
+      <button class="option-chip grid-option" data-grid="3x3">3×3</button>
+      <button class="option-chip grid-option" data-grid="4x4">4×4</button>
+    </div>
+
+    <div class="sheet-section-title">Aspect ratio</div>
+    <div class="option-group" role="group" aria-label="Aspect ratio">
+      <button class="option-chip aspect-option option-active" data-aspect="4:3">4:3</button>
+      <button class="option-chip aspect-option" data-aspect="16:9">16:9</button>
+      <button class="option-chip aspect-option" data-aspect="1:1">1:1</button>
+      <button class="option-chip aspect-option" data-aspect="full">Full</button>
+    </div>
+
+    <div class="sheet-section-title">Quality</div>
+    <div class="option-group" role="group" aria-label="Processing quality preset">
+      <button class="option-chip quality-option" data-quality="natural">Natural</button>
+      <button class="option-chip quality-option option-active" data-quality="smart">Smart</button>
+      <button class="option-chip quality-option" data-quality="hdr">HDR</button>
+      <button class="option-chip quality-option" data-quality="night">Night</button>
+      <button class="option-chip quality-option" data-quality="detail">Detail</button>
+      <button class="option-chip quality-option" data-quality="portrait">Portrait</button>
+      <button class="option-chip quality-option" data-quality="max">Max</button>
+    </div>
+  </div>
+  <div id="more-sheet-backdrop" class="sheet-backdrop"></div>
+
+  <!-- ============ GALLERY SCREEN ============ -->
+  <section id="screen-gallery" class="screen" data-screen="gallery">
+    <div id="gallery-header">
+      <button id="gallery-back-btn" class="icon-btn" aria-label="Back to camera">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4 7 12l8 8"/></svg>
+      </button>
+      <h1>Gallery</h1>
+    </div>
+    <div id="gallery-grid" role="list" aria-label="Saved photos and videos"></div>
+    <div id="gallery-empty" hidden>
+      <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.2"/><path d="M8 6l1.5-2h5L16 6"/></svg>
+      <p>Nothing here yet. Photos and videos you capture will show up in this gallery.</p>
+    </div>
+  </section>
+
+  <!-- Fullscreen viewer (overlay) -->
+  <div id="gallery-viewer">
+    <div id="viewer-topbar">
+      <button id="viewer-close-btn" class="icon-btn" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>
+      </button>
+      <button id="viewer-edit-btn" class="secondary-btn" aria-label="Edit this photo">Edit</button>
+    </div>
+    <div id="viewer-media-wrap">
+      <div id="before-after-wrap" class="compare-disabled">
+        <img id="gallery-viewer-img" alt="Captured photo">
+        <img id="before-image" alt="Original, before enhancement">
+        <span class="compare-label compare-label-before">Original</span>
+        <span class="compare-label compare-label-after">Enhanced</span>
+        <div id="compare-handle"><div id="compare-handle-grip">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6 4 12l4 6M16 6l4 6-4 6"/></svg>
+        </div></div>
+      </div>
+      <video id="gallery-viewer-video" hidden controls playsinline></video>
+    </div>
+    <div id="viewer-info-bar">
+      <span id="viewer-info-mode"></span>
+      <span id="viewer-info-size"></span>
+      <span id="viewer-info-date"></span>
+    </div>
+    <div id="viewer-actions">
+      <button id="viewer-share-btn" class="viewer-action-btn" aria-label="Share">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
+        Share
+      </button>
+      <button id="viewer-download-btn" class="viewer-action-btn" aria-label="Save to device">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>
+        Save
+      </button>
+      <button id="viewer-delete-btn" class="viewer-action-btn" aria-label="Delete">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>
+        Delete
+      </button>
+    </div>
+  </div>
+
+  <!-- ============ EDITOR SCREEN ============ -->
+  <section id="screen-editor" class="screen" data-screen="editor">
+    <div id="editor-header">
+      <button id="editor-back-btn" class="icon-btn" aria-label="Back">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4 7 12l8 8"/></svg>
+      </button>
+      <h1>Edit</h1>
+      <button id="editor-reset-btn" class="secondary-btn">Reset</button>
+    </div>
+
+    <div id="editor-stage">
+      <canvas id="editor-canvas"></canvas>
+      <canvas id="editor-original-canvas" hidden></canvas>
+      <button id="editor-compare-hold-btn">Hold to compare</button>
+
+      <div id="editor-crop-overlay">
+        <div id="crop-rect">
+          <div class="crop-handle" data-handle="nw"></div>
+          <div class="crop-handle" data-handle="ne"></div>
+          <div class="crop-handle" data-handle="sw"></div>
+          <div class="crop-handle" data-handle="se"></div>
+        </div>
+        <div id="editor-crop-actions">
+          <button id="editor-crop-cancel-btn" class="secondary-btn">Cancel</button>
+          <button id="editor-crop-apply-btn" class="primary-btn">Apply crop</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="editor-toolbar">
+      <button id="editor-auto-enhance-btn" class="editor-tool-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/><circle cx="12" cy="12" r="2.3"/></svg>
+        Auto
+      </button>
+      <button id="editor-rotate-btn" class="editor-tool-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 12a8 8 0 1 1 3 6.2"/><path d="M4 17v-4h4"/></svg>
+        Rotate
+      </button>
+      <button id="editor-crop-toggle-btn" class="editor-tool-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
+        Crop
+      </button>
+    </div>
+
+    <div id="editor-sliders">
+      <div class="slider-row"><label for="slider-brightness">Brightness</label><input type="range" id="slider-brightness" min="-1" max="1" step="0.02" value="0"><output>0</output></div>
+      <div class="slider-row"><label for="slider-contrast">Contrast</label><input type="range" id="slider-contrast" min="-1" max="1" step="0.02" value="0"><output>0</output></div>
+      <div class="slider-row"><label for="slider-highlights">Highlights</label><input type="range" id="slider-highlights" min="-1" max="1" step="0.02" value="0"><output>0</output></div>
+      <div class="slider-row"><label for="slider-shadows">Shadows</label><input type="range" id="slider-shadows" min="-1" max="1" step="0.02" value="0"><output>0</output></div>
+      <div class="slider-row"><label for="slider-saturation">Saturation</label><input type="range" id="slider-saturation" min="-1" max="1" step="0.02" value="0"><output>0</output></div>
+      <div class="slider-row"><label for="slider-temperature">Temperature</label><input type="range" id="slider-temperature" min="-1" max="1" step="0.02" value="0"><output>0</output></div>
+      <div class="slider-row"><label for="slider-sharpness">Sharpness</label><input type="range" id="slider-sharpness" min="0" max="1" step="0.02" value="0.2"><output>0.2</output></div>
+      <div class="slider-row"><label for="slider-noise">Noise reduction</label><input type="range" id="slider-noise" min="0" max="1" step="0.02" value="0"><output>0</output></div>
+    </div>
+
+    <div id="editor-footer">
+      <button id="editor-save-btn" class="primary-btn">Save to gallery</button>
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS SCREEN ============ -->
+  <section id="screen-settings" class="screen" data-screen="settings">
+    <div id="settings-header">
+      <button id="settings-back-btn" class="icon-btn" aria-label="Back to camera">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4 7 12l8 8"/></svg>
+      </button>
+      <h1>Settings</h1>
+    </div>
+
+    <div id="settings-body">
+      <div class="settings-section-title">Camera</div>
+      <div class="settings-row">
+        <span class="settings-row-label">Default camera</span>
+        <select id="setting-default-camera" class="select-input">
+          <option value="environment">Rear</option>
+          <option value="user">Front</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <span class="settings-row-label">Mirror front camera photos</span>
+        <input type="checkbox" id="setting-mirror-front" class="toggle">
+      </div>
+      <div class="settings-row">
+        <span class="settings-row-label">Grid</span>
+        <select id="setting-grid" class="select-input">
+          <option value="off">Off</option>
+          <option value="3x3">3×3</option>
+          <option value="4x4">4×4</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <span class="settings-row-label">Timer</span>
+        <select id="setting-timer" class="select-input">
+          <option value="off">Off</option>
+          <option value="3">3 seconds</option>
+          <option value="5">5 seconds</option>
+          <option value="10">10 seconds</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <span class="settings-row-label">Aspect ratio</span>
+        <select id="setting-aspect" class="select-input">
+          <option value="4:3">4:3</option>
+          <option value="16:9">16:9</option>
+          <option value="1:1">1:1</option>
+          <option value="full">Full sensor</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <span class="settings-row-label">Save original alongside enhanced</span>
+        <input type="checkbox" id="setting-save-original" class="toggle">
+      </div>
+      <div class="settings-row">
+        <span class="settings-row-label">Shutter sound</span>
+        <input type="checkbox" id="setting-shutter-sound" class="toggle">
+      </div>
+
+      <div class="settings-section-title">Processing</div>
+      <div class="settings-row">
+        <span class="settings-row-label">Default quality preset</span>
+        <select id="setting-processing-preset" class="select-input">
+          <option value="natural">Natural</option>
+          <option value="smart">Smart</option>
+          <option value="hdr">HDR</option>
+          <option value="night">Night</option>
+          <option value="detail">Detail</option>
+          <option value="portrait">Portrait</option>
+          <option value="max">Max</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <span class="settings-row-label">White balance</span>
+        <select id="setting-white-balance" class="select-input">
+          <option value="auto">Auto</option>
+          <option value="daylight">Daylight</option>
+          <option value="cloudy">Cloudy</option>
+          <option value="tungsten">Tungsten</option>
+          <option value="fluorescent">Fluorescent</option>
+        </select>
+      </div>
+
+      <div class="settings-section-title">Performance</div>
+      <div class="settings-row">
+        <span class="settings-row-label">Mode</span>
+        <select id="setting-performance-mode" class="select-input">
+          <option value="auto">Auto</option>
+          <option value="battery">Battery saver</option>
+          <option value="performance">Performance</option>
+        </select>
+      </div>
+
+      <div class="settings-section-title">Storage</div>
+      <div class="settings-row">
+        <span class="settings-row-label">On this device</span>
+        <span id="setting-storage-usage" class="settings-row-value">—</span>
+      </div>
+      <div class="settings-row">
+        <button id="setting-clear-cache" class="settings-danger">Clear all photos &amp; videos</button>
+      </div>
+
+      <div class="settings-section-title">Developer</div>
+      <div class="settings-row">
+        <span class="settings-row-label">Debug overlay</span>
+        <input type="checkbox" id="setting-debug-mode" class="toggle">
+      </div>
+
+      <div class="settings-section-title">About</div>
+      <div id="settings-about">
+        Anurag Camera · version 1.0.0<br>
+        Capture. Compute. Remember.<br><br>
+        All photo and video processing happens on this device. Nothing is ever uploaded.
+        See <a href="README.md">README.md</a> for the full privacy notes, supported features per browser, and troubleshooting.
+      </div>
+    </div>
+  </section>
+
+  <div id="toast-container" aria-live="polite"></div>
+  <canvas id="capture-canvas" style="display:none"></canvas>
+</div>
+
+<script>
+  // Module scripts (and the manifest fetch) are blocked by the browser
+  // under file://, so if someone opens this file directly instead of
+  // through a local server, js/app.js never loads and every button on
+  // the page silently does nothing. This is a plain classic script (not
+  // type="module") specifically so it still runs in that situation and
+  // can explain what's actually wrong, instead of leaving a dead UI.
+  if (location.protocol === 'file:') {
+    var el = document.createElement('div');
+    el.setAttribute('role', 'alert');
+    el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#121214;color:#ededef;' +
+      'display:flex;align-items:center;justify-content:center;padding:32px;text-align:center;' +
+      'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.55;';
+    el.innerHTML =
+      '<div style="max-width:380px">' +
+      '<div style="font-size:15px;font-weight:600;margin-bottom:10px;color:#ffb238;">This page was opened directly from disk</div>' +
+      '<p style="font-size:14px;color:#c9c9cd;margin:0 0 10px;">Browsers block scripts and camera access under a <code>file://</code> address. ' +
+      'Buttons on this page will not respond until it is served over <code>http://</code> or <code>https://</code>.</p>' +
+      '<p style="font-size:14px;color:#c9c9cd;margin:0;">Serve this folder with any local web server (for example VS Code\u2019s "Live Server" extension, ' +
+      'or <code style="white-space:nowrap">python -m http.server</code>), then open the <code>http://localhost\u2026</code> address it gives you. ' +
+      'See README.md \u2192 "Running it locally" for details.</p>' +
+      '</div>';
+    document.addEventListener('DOMContentLoaded', function () { document.body.appendChild(el); });
+  }
+</script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
